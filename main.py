@@ -1,5 +1,7 @@
 from collections import defaultdict
+import pandas as pd
 import yfinance as yf
+from itertools import cycle
 
 def extract_buy_days(data):
     dd = defaultdict(list)
@@ -16,6 +18,9 @@ def extract_field(data, field):
 def get_data(symbols, start=None, end=None):
     data = yf.download(symbols, start=start, end=end, actions=True, progress=False)
     data.dropna(inplace=True)
+    # yf returns a regular index if there is only one ticker
+    if len(symbols) == 1:
+        data.columns = pd.MultiIndex.from_tuples(zip(data.columns, cycle(symbols)))
     return data
 
 def main(buy_amount=1000, start=None, end=None, symbols=()):
