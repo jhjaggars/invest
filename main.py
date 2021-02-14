@@ -52,11 +52,12 @@ def main(buy_amount=1000, start=None, end=None, symbols=()):
     final_day = max(data.index)
     total_invested = buy_amount * len(buys)
     print(f"Start date: {min(data.index)}")
-    print(f"Total Invested: {total_invested}")
+    print(f"Total Invested: ${total_invested:,}")
     for symbol, price in data.loc[final_day].Close.items():
         value = shares[symbol] * price
         roi = int(100 * (value / total_invested))
-        print(f"{symbol:5} ${value:20.2f} {roi:6}%")
+        fvalue = f"${value:,.2f}"
+        print(f"{symbol:>5} {fvalue:>20} {roi:>6,}%")
 
 if __name__ == "__main__":
     import sys
