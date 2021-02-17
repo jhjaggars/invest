@@ -1,13 +1,16 @@
+import math
 from collections import defaultdict
+from itertools import cycle
+
 import pandas as pd
 import yfinance as yf
-from itertools import cycle
+
 
 def extract_buy_days(data):
     dd = defaultdict(list)
     for ts in data.index:
         dd[(ts.year, ts.month)].append(ts)
-    
+
     days = sorted(min(tss) for tss in dd.values())
     return data.T[days].T.Close
 
@@ -23,7 +26,7 @@ def get_data(symbols, start=None, end=None):
         data.columns = pd.MultiIndex.from_tuples(zip(data.columns, cycle(symbols)))
     return data
 
-def main(buy_amount=1000, start=None, end=None, symbols=()):
+def main(buy_amount=1000, start=None, end=None, symbols=(), one_buy=False):
     data = get_data(symbols, start=start, end=end)
     buys = extract_buy_days(data)
     divs = extract_field(data, "Dividends")
@@ -32,11 +35,15 @@ def main(buy_amount=1000, start=None, end=None, symbols=()):
     all_days = sorted(set(buys.index) | set(divs.index) | set(splits.index))
 
     shares = dict.fromkeys(symbols, 0)
+    bought = False
 
     for day in all_days:
-        if day in buys.index:
+        if day in buys.index and not bought:
             for symbol, price in data.loc[day].Close.items():
                 shares[symbol] = shares.get(symbol, 0) + (float(buy_amount / price))
+
+        if one_buy:
+            bought = True
 
         if day in divs.index:
             for symbol, amt in divs.loc[day].items():
@@ -50,21 +57,24 @@ def main(buy_amount=1000, start=None, end=None, symbols=()):
                     shares[symbol] = shares.get(symbol, 0) * amt
 
     final_day = max(data.index)
-    total_invested = buy_amount * len(buys)
+    years = len(buys) / 12
+    total_invested = buy_amount if one_buy else buy_amount * len(buys)
     print(f"Start date: {min(data.index)}")
     print(f"Total Invested: ${total_invested:,}")
     for symbol, price in data.loc[final_day].Close.items():
         value = shares[symbol] * price
-        roi = int(100 * (value / total_invested))
+        roi = int(100 * ((value - total_invested)/ total_invested))
+        ann_ret = 100 * (math.pow(value / total_invested, 1 / years) - 1)
         fvalue = f"${value:,.2f}"
-        print(f"{symbol:>5} {fvalue:>20} {roi:>6,}%")
+        print(f"{symbol:>5} {fvalue:>20} {roi:>6,}% {ann_ret:.2f}%")
 
 if __name__ == "__main__":
-    import sys
     import argparse
     p = argparse.ArgumentParser()
     p.add_argument("tickers", metavar="TICKER", nargs="+")
     p.add_argument("--start", metavar="S", default=None)
     p.add_argument("--end", metavar="E", default=None)
-    args = p.parse_args() 
-    main(symbols=args.tickers, start=args.start, end=args.end)
+    p.add_argument("--principal", metavar="P", type=int, default=1000)
+    p.add_argument("--one-buy", action="store_true", default=False)
+    args = p.parse_args()
+    main(symbols=args.tickers, start=args.start, end=args.end, buy_amount=args.principal, one_buy=args.one_buy)
