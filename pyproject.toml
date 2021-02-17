@@ -8,6 +8,7 @@ authors = ["Jesse Jaggars <jhjaggars@gmail.com>"]
 python = "^3.9"
 yfinance = "^0.1.55"
 pandas = "^1.2.2"
+rich = "^9.11.0"
 
 [tool.poetry.dev-dependencies]
 

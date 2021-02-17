@@ -4,6 +4,11 @@ from itertools import cycle
 
 import pandas as pd
 import yfinance as yf
+from rich import box
+from rich.console import Console
+from rich.table import Table
+
+console = Console()
 
 
 def extract_buy_days(data):
@@ -59,14 +64,29 @@ def main(buy_amount=1000, start=None, end=None, symbols=(), one_buy=False):
     final_day = max(data.index)
     years = len(buys) / 12
     total_invested = buy_amount if one_buy else buy_amount * len(buys)
-    print(f"Start date: {min(data.index)}")
-    print(f"Total Invested: ${total_invested:,}")
+
+    console.print(f"Start date: {min(data.index)}")
+    console.print(f"Total Invested: ${total_invested:,}")
+
+    table = Table(show_header=True, header_style="bold magenta", box=box.MINIMAL_HEAVY_HEAD)
+    table.add_column("Symbol")
+    table.add_column("Value", justify="right")
+    table.add_column("ROI", justify="right")
+    table.add_column("CAGR", justify="right")
+
     for symbol, price in data.loc[final_day].Close.items():
         value = shares[symbol] * price
         roi = int(100 * ((value - total_invested)/ total_invested))
         ann_ret = 100 * (math.pow(value / total_invested, 1 / years) - 1)
         fvalue = f"${value:,.2f}"
-        print(f"{symbol:>5} {fvalue:>20} {roi:>6,}% {ann_ret:.2f}%")
+        table.add_row(
+            symbol,
+            fvalue,
+            f"{roi:.2f}%",
+            f"{ann_ret:.2f}%"
+        )
+
+    console.print(table)
 
 if __name__ == "__main__":
     import argparse
