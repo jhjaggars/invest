@@ -9,6 +9,8 @@ python = "^3.9"
 yfinance = "^0.1.55"
 pandas = "^1.2.2"
 rich = "^9.11.0"
+investpy = "^1.0.3"
+pyyaml = "^5.4.1"
 
 [tool.poetry.dev-dependencies]
 
