@@ -19,18 +19,15 @@ def extract_buy_days(data, grouper=_default_grouper):
         dd[grouper(ts)].append(ts)
 
     days = sorted(min(tss) for tss in dd.values())
-    return data.T[days].T.Close
+    return data['Close'].loc[days]
 
 def extract_field(data, field):
     fs = data[field]
     return fs[(fs.T != 0.0).any()]
 
 def get_data(symbols, start=None, end=None):
-    data = yf.download(symbols, start=start, end=end, actions=True, progress=False, back_adjust=True)
+    data = yf.download(symbols, start=start, end=end, actions=True, progress=False, auto_adjust=True)
     data.dropna(inplace=True)
-    # yf returns a regular index if there is only one ticker
-    if len(symbols) == 1:
-        data.columns = pd.MultiIndex.from_tuples(zip(data.columns, cycle(symbols)))
     return data
 
 def main(buy_amount=1000, start=None, end=None, symbols=(), one_buy=False, frequency=None):
@@ -43,7 +40,7 @@ def main(buy_amount=1000, start=None, end=None, symbols=(), one_buy=False, frequ
     buys = extract_buy_days(data, grouper=grouper)
     divs = extract_field(data, "Dividends")
     splits = extract_field(data, "Stock Splits")
-    div_prices = data.T[divs.index].T.Close
+    div_prices = data['Close'].loc[divs.index]
     all_days = sorted(set(buys.index) | set(divs.index) | set(splits.index))
 
     shares = dict.fromkeys(symbols, 0)
@@ -52,7 +49,7 @@ def main(buy_amount=1000, start=None, end=None, symbols=(), one_buy=False, frequ
 
     for day in all_days:
         if day in buys.index and not bought:
-            for symbol, price in data.loc[day].Close.items():
+            for symbol, price in data['Close'].loc[day].items():
                 amt = float(buy_amount / price)
                 shares[symbol] = shares.get(symbol, 0) + amt
 
@@ -88,7 +85,7 @@ def main(buy_amount=1000, start=None, end=None, symbols=(), one_buy=False, frequ
     table.add_column("Div Yield", justify="right")
 
     results = []
-    for symbol, price in data.loc[final_day].Close.items():
+    for symbol, price in data['Close'].loc[final_day].items():
         value = shares[symbol] * price
         roi = int(100 * ((value - total_invested)/ total_invested))
         ann_ret = 100 * (math.pow(value / total_invested, 1 / years) - 1)
